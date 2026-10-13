@@ -1,0 +1,579 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>快活CLUB 料金チェッカー（高知中万々店）</title>
+    <style>
+        :root {
+            --primary-orange: #FF6600;
+            --dark-black: #222222;
+            --bg-white: #FFFFFF;
+            --bg-gray: #F7F7F7;
+            --border-color: #DDDDDD;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            background-color: var(--bg-gray);
+            color: var(--dark-black);
+            margin: 0;
+            padding: 16px;
+        }
+        .container {
+            max-width: 500px;
+            margin: 0 auto;
+            background: var(--bg-white);
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+            overflow: hidden;
+            border-top: 6px solid var(--primary-orange);
+        }
+        header {
+            background: var(--dark-black);
+            color: white;
+            padding: 16px;
+            text-align: center;
+        }
+        header h1 {
+            margin: 0;
+            font-size: 1.2rem;
+        }
+        header p {
+            margin: 4px 0 0;
+            font-size: 0.8rem;
+            color: var(--primary-orange);
+        }
+        .content {
+            padding: 16px;
+        }
+        .tab-menu {
+            display: flex;
+            border-bottom: 2px solid var(--border-color);
+            margin-bottom: 16px;
+        }
+        .tab-btn {
+            flex: 1;
+            padding: 10px;
+            text-align: center;
+            background: none;
+            border: none;
+            font-weight: bold;
+            cursor: pointer;
+            color: #777;
+            font-size: 0.95rem;
+        }
+        .tab-btn.active {
+            color: var(--primary-orange);
+            border-bottom: 3px solid var(--primary-orange);
+            margin-bottom: -2px;
+        }
+        .section {
+            display: none;
+        }
+        .section.active {
+            display: block;
+        }
+        .form-group {
+            margin-bottom: 14px;
+        }
+        label {
+            display: block;
+            font-size: 0.85rem;
+            font-weight: bold;
+            margin-bottom: 6px;
+        }
+        select, input[type="datetime-local"] {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            font-size: 1rem;
+            box-sizing: border-box;
+            background: white;
+        }
+        .btn {
+            width: 100%;
+            padding: 10px;
+            background: #555;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            font-size: 0.85rem;
+            font-weight: bold;
+            cursor: pointer;
+            margin-top: 6px;
+        }
+        .btn-half {
+            width: 48%;
+        }
+        .btn-flex {
+            display: flex;
+            justify-content: space-between;
+        }
+        .btn-reset {
+            background: #e74c3c;
+        }
+        .btn:active {
+            opacity: 0.8;
+        }
+        .result-card {
+            background: var(--bg-gray);
+            border-radius: 8px;
+            padding: 16px;
+            margin-top: 16px;
+            border: 1px solid var(--border-color);
+        }
+        .result-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+            font-size: 0.95rem;
+        }
+        .result-row:last-child {
+            margin-bottom: 0;
+        }
+        .price-highlight {
+            font-size: 1.4rem;
+            font-weight: bold;
+            color: var(--primary-orange);
+        }
+        .plan-name {
+            font-weight: bold;
+            color: var(--dark-black);
+            text-align: right;
+            max-width: 60%;
+        }
+        .next-highlight {
+            font-weight: bold;
+            color: #d35400;
+        }
+        .note {
+            font-size: 0.75rem;
+            color: #666;
+            margin-top: 12px;
+            line-height: 1.4;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <header>
+        <h1>快活CLUB 料金チェッカー</h1>
+        <p>高知中万々店（祝日自動判定・予定シミュレーション対応）</p>
+    </header>
+    
+    <div class="content">
+        <!-- タブ切り替え -->
+        <div class="tab-menu">
+            <button class="tab-btn active" onclick="switchTab('normal')">通常モード</button>
+            <button class="tab-btn" onclick="switchTab('relay')">席替え按分モード</button>
+        </div>
+
+        <!-- 通常モード -->
+        <div id="section-normal" class="section active">
+            <div class="form-group">
+                <label>席の種類</label>
+                <select id="seatType" onchange="calculateNormal()">
+                    <option value="cafe">飲み放題カフェ</option>
+                    <option value="booth">ブース</option>
+                    <option value="darts">ダーツ・ビリヤード・カラオケ</option>
+                    <option value="room">鍵付完全個室</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label>入店日時</label>
+                <input type="datetime-local" id="entryDateTime" onchange="calculateNormal()">
+                <button class="btn" onclick="setNowNormalEntry()">入店に現在日時をセット</button>
+            </div>
+
+            <div class="form-group" style="margin-top: 16px;">
+                <label>退店日時（予定をみる時に入力）</label>
+                <input type="datetime-local" id="exitDateTime" onchange="calculateNormal()">
+                <div class="btn-flex">
+                    <button class="btn btn-half" onclick="setNowNormalExit()">退店に現在をセット</button>
+                    <button class="btn btn-half btn-reset" onclick="clearNormalExit()">リセット (リアルタイム)</button>
+                </div>
+            </div>
+
+            <div class="result-card">
+                <div class="result-row">
+                    <span id="elapsedTimeLabel">現在の経過時間</span>
+                    <span id="elapsedTime" class="plan-name">-</span>
+                </div>
+                <div class="result-row">
+                    <span>適用プラン</span>
+                    <span id="currentPlan" class="plan-name">-</span>
+                </div>
+                <div class="result-row">
+                    <span id="priceLabel">現在の料金目安</span>
+                    <span id="currentPrice" class="price-highlight">-</span>
+                </div>
+                <div class="result-row" style="flex-direction: column; align-items: flex-end; margin-top: 8px;">
+                    <span style="font-size: 0.8rem; color: #555; margin-bottom: 4px;">次の金額アップまで</span>
+                    <span id="nextUpdate" class="plan-name next-highlight" style="font-size: 1rem;">-</span>
+                </div>
+            </div>
+            <div class="note">
+                ※金・祝前日PM6:00〜土日祝はパック料金に+330円が加算されます。<br>
+                <span id="holidayStatus" style="font-weight:bold; color:#FF6600;">(祝日データを取得中...)</span>
+            </div>
+        </div>
+
+        <!-- 席替え按分モード -->
+        <div id="section-relay" class="section">
+            <div class="form-group">
+                <label>① 1軒目の席と入店日時</label>
+                <select id="seat1Type" onchange="calculateRelay()" style="margin-bottom: 6px;">
+                    <option value="cafe">飲み放題カフェ</option>
+                    <option value="booth">ブース</option>
+                    <option value="darts">ダーツ・ビリヤード・カラオケ</option>
+                </select>
+                <input type="datetime-local" id="relayEntryTime" onchange="calculateRelay()">
+                <button class="btn" onclick="setRelayTime('relayEntryTime')">①に現在日時をセット</button>
+            </div>
+
+            <div class="form-group" style="margin-top: 16px;">
+                <label>② 2軒目の席と移動（席替え）日時</label>
+                <select id="seat2Type" onchange="calculateRelay()" style="margin-bottom: 6px;">
+                    <option value="cafe">飲み放題カフェ</option>
+                    <option value="booth" selected>ブース</option>
+                    <option value="darts">ダーツ・ビリヤード・カラオケ</option>
+                </select>
+                <input type="datetime-local" id="relayMoveTime" onchange="calculateRelay()">
+                <button class="btn" onclick="setRelayTime('relayMoveTime')">②に現在日時をセット</button>
+            </div>
+
+            <div class="form-group" style="margin-top: 16px;">
+                <label>③ 退店日時（予定時刻）</label>
+                <input type="datetime-local" id="relayExitTime" onchange="calculateRelay()">
+                <button class="btn" onclick="setRelayTime('relayExitTime')">③に現在日時をセット</button>
+            </div>
+
+            <div class="result-card">
+                <div class="result-row">
+                    <span>1軒目の滞在</span>
+                    <span id="seat1Duration" class="plan-name">-</span>
+                </div>
+                <div class="result-row">
+                    <span>2軒目の滞在</span>
+                    <span id="seat2Duration" class="plan-name">-</span>
+                </div>
+                <div class="result-row">
+                    <span>トータル滞在時間</span>
+                    <span id="relayTotalTime" class="plan-name">-</span>
+                </div>
+                <div class="result-row">
+                    <span>按分合算料金</span>
+                    <span id="relayTotalPrice" class="price-highlight">-</span>
+                </div>
+            </div>
+            <div class="note">
+                ※トータル時間に対する最安プランの料金を、それぞれの滞在時間の割合で按分して合算しています。
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    let holidaysCache = {};
+
+    fetch('https://holidays-jp.github.io/api/v1/date.json')
+        .then(response => response.json())
+        .then(data => {
+            holidaysCache = data;
+            const statusEl = document.getElementById('holidayStatus');
+            statusEl.innerText = '(祝日データ: 最新版を自動取得済 ✓)';
+            statusEl.style.color = '#28a745';
+            calculateNormal();
+            if(document.getElementById('relayEntryTime').value) calculateRelay();
+        })
+        .catch(err => {
+            const statusEl = document.getElementById('holidayStatus');
+            statusEl.innerText = '(オフラインのため、通常の週末判定のみ行います)';
+            statusEl.style.color = '#777';
+        });
+
+    function formatYYYYMMDD(date) {
+        const y = date.getFullYear();
+        const m = String(date.getMonth() + 1).padStart(2, '0');
+        const d = String(date.getDate()).padStart(2, '0');
+        return `${y}-${m}-${d}`;
+    }
+
+    function isHoliday(date) {
+        return !!holidaysCache[formatYYYYMMDD(date)];
+    }
+
+    function isDayBeforeHoliday(date) {
+        const nextDay = new Date(date);
+        nextDay.setDate(nextDay.getDate() + 1);
+        return isHoliday(nextDay);
+    }
+
+    function isWeekendOrNightSurcharge(date) {
+        const day = date.getDay();
+        const hour = date.getHours();
+        const isWeekendOrFridayNight = (day === 5 && hour >= 18) || day === 6 || day === 0;
+        const isHol = isHoliday(date);
+        const isPreHolNight = isDayBeforeHoliday(date) && hour >= 18;
+        return isWeekendOrFridayNight || isHol || isPreHolNight;
+    }
+
+    const FEE_TABLES = {
+        cafe: { base30: 250, ext10: 80, packs: { 3: 710, 6: 1140, 9: 1500, 12: 1790, 15: 2250, 18: 2690, 21: 2890, 24: 3070 }, night: { 8: 1140, 12: 1500 } },
+        booth: { base30: 310, ext10: 110, packs: { 3: 1150, 6: 1760, 9: 2310, 12: 2750, 15: 3410, 18: 4070, 21: 4510, 24: 4730 }, night: { 8: 1800, 12: 2310 } },
+        darts: { base30: 330, ext10: 120, packs: { 3: 1200, 6: 1980, 9: 2640, 12: 3190, 15: 3960, 18: 4730, 21: 5060, 24: 5290 }, night: { 8: 2000, 12: 2640 } },
+        room: { base30: 420, ext10: 140, packs: { 3: 1540, 6: 2570, 9: 3430, 12: 4150, 15: 5170, 18: 5990, 21: 6680, 24: 6880 }, night: { 8: 2570, 12: 3430 } }
+    };
+
+    function switchTab(tabName) {
+        document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+        document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+        if(tabName === 'normal') {
+            document.querySelectorAll('.tab-btn')[0].classList.add('active');
+            document.getElementById('section-normal').classList.add('active');
+        } else {
+            document.querySelectorAll('.tab-btn')[1].classList.add('active');
+            document.getElementById('section-relay').classList.add('active');
+        }
+        saveState();
+    }
+
+    function formatDateTimeLocal(date) {
+        const yyyy = date.getFullYear();
+        const mm = String(date.getMonth() + 1).padStart(2, '0');
+        const dd = String(date.getDate()).padStart(2, '0');
+        const hh = String(date.getHours()).padStart(2, '0');
+        const min = String(date.getMinutes()).padStart(2, '0');
+        return `${yyyy}-${mm}-${dd}T${hh}:${min}`;
+    }
+
+    function setNowNormalEntry() {
+        document.getElementById('entryDateTime').value = formatDateTimeLocal(new Date());
+        calculateNormal();
+    }
+
+    function setNowNormalExit() {
+        document.getElementById('exitDateTime').value = formatDateTimeLocal(new Date());
+        calculateNormal();
+    }
+
+    function clearNormalExit() {
+        document.getElementById('exitDateTime').value = '';
+        calculateNormal();
+    }
+
+    function setRelayTime(elementId) {
+        document.getElementById(elementId).value = formatDateTimeLocal(new Date());
+        calculateRelay();
+    }
+
+    function getCostForDuration(seatKey, totalMinutes, entryDate) {
+        const table = FEE_TABLES[seatKey];
+        const isSurcharge = isWeekendOrNightSurcharge(entryDate);
+        const addFee = isSurcharge ? 330 : 0;
+        const entryHour = entryDate.getHours();
+        const isNightTime = (entryHour >= 18 || entryHour < 4);
+
+        let candidates = [];
+
+        // 1. 通常料金（延長含む）
+        let normalCost = table.base30;
+        if (totalMinutes > 30) {
+            const extUnits = Math.ceil((totalMinutes - 30) / 10);
+            normalCost += extUnits * table.ext10;
+        }
+        const normalBoundary = totalMinutes <= 30 ? 30 : 30 + Math.ceil((totalMinutes - 30) / 10) * 10;
+        candidates.push({ name: '通常料金', price: normalCost, nextMinutes: normalBoundary - totalMinutes, isNight: false });
+
+        // 2. 通常パック ＆ パック＋延長料金のハイブリッド判定
+        for (let [hoursStr, basePrice] of Object.entries(table.packs)) {
+            const h = parseInt(hoursStr);
+            const packMin = h * 60;
+            const packBase = basePrice + addFee;
+            
+            if (totalMinutes <= packMin) {
+                candidates.push({ name: `${h}時間パック${isSurcharge ? ' (+330円)' : ''}`, price: packBase, nextMinutes: packMin - totalMinutes, isNight: false });
+            } else {
+                const overMin = totalMinutes - packMin;
+                const extUnits = Math.ceil(overMin / 10);
+                const packExtPrice = packBase + (extUnits * table.ext10);
+                const packExtBoundary = packMin + (extUnits * 10);
+                candidates.push({ name: `${h}時間パック＋延長${isSurcharge ? ' (+330円)' : ''}`, price: packExtPrice, nextMinutes: packExtBoundary - totalMinutes, isNight: false });
+            }
+        }
+
+        // 3. ナイトパック ＆ ナイト＋延長料金のハイブリッド判定
+        if (isNightTime) {
+            [8, 12].forEach(h => {
+                if(table.night[h]) {
+                    const packMin = h * 60;
+                    const packBase = table.night[h] + addFee;
+                    if (totalMinutes <= packMin) {
+                        candidates.push({ name: `ナイト${h}時間パック${isSurcharge ? ' (+330円)' : ''}`, price: packBase, nextMinutes: packMin - totalMinutes, isNight: true });
+                    } else {
+                        const overMin = totalMinutes - packMin;
+                        const extUnits = Math.ceil(overMin / 10);
+                        const packExtPrice = packBase + (extUnits * table.ext10);
+                        const packExtBoundary = packMin + (extUnits * 10);
+                        candidates.push({ name: `ナイト${h}時間パック＋延長${isSurcharge ? ' (+330円)' : ''}`, price: packExtPrice, nextMinutes: packExtBoundary - totalMinutes, isNight: true });
+                    }
+                }
+            });
+        }
+
+        candidates.sort((a, b) => {
+            if (a.price !== b.price) return a.price - b.price;
+            return (a.isNight === b.isNight) ? 0 : a.isNight ? -1 : 1;
+        });
+        
+        return candidates[0];
+    }
+
+    function calculateNormal() {
+        saveState();
+        const entryVal = document.getElementById('entryDateTime').value;
+        if (!entryVal) return;
+
+        const entryDate = new Date(entryVal);
+        const exitVal = document.getElementById('exitDateTime').value;
+        
+        const isSimulating = !!exitVal;
+        const endDate = isSimulating ? new Date(exitVal) : new Date();
+
+        const diffMs = endDate - entryDate;
+        const totalMinutes = Math.floor(diffMs / (1000 * 60));
+
+        document.getElementById('elapsedTimeLabel').innerText = isSimulating ? '予定の滞在時間' : '現在の経過時間';
+        document.getElementById('priceLabel').innerText = isSimulating ? '予定の料金目安' : '現在の料金目安';
+
+        if (totalMinutes < 0) {
+            document.getElementById('elapsedTime').innerText = '退店日時が未来/過去でおかしいです';
+            document.getElementById('currentPlan').innerText = '-';
+            document.getElementById('currentPrice').innerText = '-';
+            document.getElementById('nextUpdate').innerText = '-';
+            return;
+        }
+
+        const hours = Math.floor(totalMinutes / 60);
+        const mins = totalMinutes % 60;
+        document.getElementById('elapsedTime').innerText = `${hours}時間 ${mins}分`;
+
+        if (totalMinutes > MAX_MINUTES) {
+            document.getElementById('currentPlan').innerText = '24時間超（計算対象外）';
+            document.getElementById('currentPrice').innerText = '-';
+            document.getElementById('nextUpdate').innerText = '-';
+            return;
+        }
+
+        const seatKey = document.getElementById('seatType').value;
+        const result = getCostForDuration(seatKey, totalMinutes, entryDate);
+        document.getElementById('currentPlan').innerText = result.name;
+        document.getElementById('currentPrice').innerText = `約 ${result.price.toLocaleString()} 円`;
+
+        // --- 追加：次回の料金計算と表示 ---
+        let timeText = "";
+        if (result.nextMinutes <= 0) {
+            timeText = 'まもなく（1分以内）';
+        } else {
+            const nextH = Math.floor(result.nextMinutes / 60);
+            const nextM = result.nextMinutes % 60;
+            timeText = nextH > 0 ? `あと ${nextH}時間 ${nextM}分` : `あと ${nextM}分`;
+        }
+
+        const nextMinCheck = totalMinutes + result.nextMinutes + 1;
+        if (nextMinCheck > MAX_MINUTES) {
+            document.getElementById('nextUpdate').innerText = `${timeText} ➔ 次は 24時間超(精算)`;
+        } else {
+            const nextResult = getCostForDuration(seatKey, nextMinCheck, entryDate);
+            document.getElementById('nextUpdate').innerText = `${timeText} ➔ 次は 約 ${nextResult.price.toLocaleString()} 円`;
+        }
+    }
+
+    function calculateRelay() {
+        saveState();
+        const t1 = document.getElementById('relayEntryTime').value;
+        const t2 = document.getElementById('relayMoveTime').value;
+        const t3 = document.getElementById('relayExitTime').value;
+        if (!t1 || !t2 || !t3) return;
+
+        const d1 = new Date(t1);
+        const d2 = new Date(t2);
+        const d3 = new Date(t3);
+        const min1 = Math.floor((d2 - d1) / (1000 * 60));
+        const min2 = Math.floor((d3 - d2) / (1000 * 60));
+        const totalMin = min1 + min2;
+
+        if (min1 <= 0 || min2 <= 0 || totalMin <= 0) {
+            document.getElementById('seat1Duration').innerText = '日時順が不正';
+            document.getElementById('seat2Duration').innerText = '-';
+            document.getElementById('relayTotalTime').innerText = '-';
+            document.getElementById('relayTotalPrice').innerText = '-';
+            return;
+        }
+
+        document.getElementById('seat1Duration').innerText = `${Math.floor(min1/60)}時間 ${min1%60}分`;
+        document.getElementById('seat2Duration').innerText = `${Math.floor(min2/60)}時間 ${min2%60}分`;
+        document.getElementById('relayTotalTime').innerText = `${Math.floor(totalMin/60)}時間 ${totalMin%60}分`;
+
+        if (totalMin > MAX_MINUTES) {
+            document.getElementById('relayTotalPrice').innerText = '24時間超（計算対象外）';
+            return;
+        }
+
+        const s1Type = document.getElementById('seat1Type').value;
+        const s2Type = document.getElementById('seat2Type').value;
+        const cost1Full = getCostForDuration(s1Type, totalMin, d1).price;
+        const cost2Full = getCostForDuration(s2Type, totalMin, d1).price;
+        const ratio1 = min1 / totalMin;
+        const ratio2 = min2 / totalMin;
+        const proratedPrice = Math.round((cost1Full * ratio1) + (cost2Full * ratio2));
+
+        document.getElementById('relayTotalPrice').innerText = `約 ${proratedPrice.toLocaleString()} 円`;
+    }
+
+    const MAX_MINUTES = 24 * 60;
+    const STORAGE_KEY = 'kaikatsuChecker_v1';
+    const SAVE_IDS = ['seatType', 'entryDateTime', 'exitDateTime',
+                      'seat1Type', 'relayEntryTime', 'seat2Type', 'relayMoveTime', 'relayExitTime'];
+
+    function saveState() {
+        try {
+            const data = {};
+            SAVE_IDS.forEach(id => { data[id] = document.getElementById(id).value; });
+            data.tab = document.getElementById('section-relay').classList.contains('active') ? 'relay' : 'normal';
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+        } catch (e) {}
+    }
+
+    function loadState() {
+        try {
+            const raw = localStorage.getItem(STORAGE_KEY);
+            if (!raw) return;
+            const data = JSON.parse(raw);
+            SAVE_IDS.forEach(id => {
+                if (typeof data[id] === 'string') document.getElementById(id).value = data[id];
+            });
+            if (data.tab === 'relay') switchTab('relay');
+        } catch (e) {}
+    }
+
+    loadState();
+    if (!document.getElementById('entryDateTime').value) {
+        setNowNormalEntry();
+    } else {
+        calculateNormal();
+    }
+    if (document.getElementById('relayEntryTime').value) calculateRelay();
+
+    setInterval(() => {
+        calculateNormal();
+    }, 60000);
+
+</script>
+
+</body>
+</html>
